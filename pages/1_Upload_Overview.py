@@ -1,6 +1,7 @@
 from utils.session import initialize_session_state, reset_session_state
 import streamlit as st
 import pandas as pd
+import json
 
 initialize_session_state()
 
@@ -19,19 +20,36 @@ with top_right:
 file = st.file_uploader("Upload your dataset", type=["csv", "xlsx", "json"])
 
 if file is not None:
-    if file.name.endswith(".csv"):
-        df = pd.read_csv(file)
-    elif file.name.endswith(".xlsx"):
-        df = pd.read_excel(file)
-    else:
-        df = pd.read_json(file)
+    df = None  # <-- important fix
 
-    st.success("File uploaded successfully!")
+    try:
+        if file.name.endswith(".csv"):
+            df = pd.read_csv(file)
 
-    st.session_state.original_df = df.copy()
-    st.session_state.working_df = df.copy()
+        elif file.name.endswith(".xlsx"):
+            df = pd.read_excel(file)
 
-    st.info("Dataset loaded. Proceed to Cleaning Studio.")
+        elif file.name.endswith(".json"):
+            data = json.load(file)
+
+            if isinstance(data, list):
+                df = pd.DataFrame(data)
+
+            elif isinstance(data, dict):
+                df = pd.json_normalize(data)
+
+        if df is not None:
+            st.success("File uploaded successfully!")
+
+            st.session_state.original_df = df.copy()
+            st.session_state.working_df = df.copy()
+
+            st.info("Dataset loaded. Proceed to Cleaning Studio.")
+        else:
+            st.error("Could not process file format.")
+
+    except Exception as e:
+        st.error(f"Error reading file: {e}")
 
 if st.session_state.working_df is not None:
     df = st.session_state.working_df
