@@ -20,7 +20,7 @@ with top_right:
 file = st.file_uploader("Upload your dataset", type=["csv", "xlsx", "json"])
 
 if file is not None:
-    df = None  # <-- important fix
+    df = None
 
     try:
         if file.name.endswith(".csv"):
@@ -32,18 +32,23 @@ if file is not None:
         elif file.name.endswith(".json"):
             data = json.load(file)
 
-            if isinstance(data, list):
+            if isinstance(data, dict) and "data" in data:
+                df = pd.DataFrame(data["data"])
+
+            elif isinstance(data, list):
                 df = pd.DataFrame(data)
 
             elif isinstance(data, dict):
                 df = pd.json_normalize(data)
 
+            else:
+                st.error("Unsupported JSON structure.")
+                st.stop()
+
         if df is not None:
             st.success("File uploaded successfully!")
-
             st.session_state.original_df = df.copy()
             st.session_state.working_df = df.copy()
-
             st.info("Dataset loaded. Proceed to Cleaning Studio.")
         else:
             st.error("Could not process file format.")
