@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 
 from utils.session import initialize_session_state
 
@@ -26,7 +27,7 @@ st.subheader("Chart Builder")
 
 chart_type = st.selectbox(
     "Select chart type",
-    ["Histogram", "Line Chart", "Bar Chart"]
+    ["Histogram", "Line Chart", "Bar Chart", "Box Plot", "Scatter Plot", "Heatmap"]
 )
 
 if chart_type == "Histogram":
@@ -88,4 +89,58 @@ elif chart_type == "Bar Chart":
             ax.set_ylabel("Count")
             plt.xticks(rotation=45)
             st.pyplot(fig)
-            
+
+elif chart_type == "Box Plot":
+    st.caption("Box plot requires one numeric column.")
+
+    if not numeric_cols:
+        st.warning("No numeric columns available for box plot.")
+    else:
+        column = st.selectbox("Select numeric column", numeric_cols)
+
+        if st.button("Generate Box Plot"):
+            fig, ax = plt.subplots()
+            ax.boxplot(df[column].dropna())
+            ax.set_title(f"Box Plot of {column}")
+            ax.set_ylabel(column)
+            st.pyplot(fig)
+
+elif chart_type == "Scatter Plot":
+    st.caption("Scatter plot requires two numeric columns.")
+
+    if len(numeric_cols) < 2:
+        st.warning("At least two numeric columns are required for scatter plot.")
+    else:
+        x_col = st.selectbox("Select X-axis", numeric_cols)
+        y_col = st.selectbox("Select Y-axis", numeric_cols)
+
+        if st.button("Generate Scatter Plot"):
+            plot_df = df[[x_col, y_col]].dropna().copy()
+
+            fig, ax = plt.subplots()
+            ax.scatter(plot_df[x_col], plot_df[y_col])
+            ax.set_title(f"{y_col} vs {x_col}")
+            ax.set_xlabel(x_col)
+            ax.set_ylabel(y_col)
+            st.pyplot(fig)
+
+elif chart_type == "Heatmap":
+    st.caption("Heatmap shows the correlation matrix for numeric columns.")
+
+    if len(numeric_cols) < 2:
+        st.warning("At least two numeric columns are required for heatmap.")
+    else:
+        if st.button("Generate Heatmap"):
+            corr = df[numeric_cols].corr()
+
+            fig, ax = plt.subplots()
+            cax = ax.matshow(corr, cmap="coolwarm")
+            fig.colorbar(cax)
+
+            ax.set_xticks(range(len(corr.columns)))
+            ax.set_yticks(range(len(corr.columns)))
+            ax.set_xticklabels(corr.columns, rotation=90)
+            ax.set_yticklabels(corr.columns)
+
+            ax.set_title("Correlation Heatmap", pad=20)
+            st.pyplot(fig)
