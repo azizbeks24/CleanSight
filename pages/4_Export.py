@@ -1,27 +1,45 @@
 import streamlit as st
+import pandas as pd
+import io
 
-from utils.session import initialize_session_state
+st.title("Export")
 
-initialize_session_state()
+df = st.session_state.working_df
 
-st.title("Export Data")
+if df is not None:
+    st.subheader("Download Cleaned Dataset")
 
-if st.session_state.working_df is None:
-    st.warning("No data available. Please upload and process data first.")
-    st.stop()
+    # CSV
+    csv_data = df.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        label="Download as CSV",
+        data=csv_data,
+        file_name="cleaned_data.csv",
+        mime="text/csv"
+    )
 
-df = st.session_state.working_df.copy()
+    # Excel
+    excel_buffer = io.BytesIO()
+    with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="CleanedData")
+    excel_data = excel_buffer.getvalue()
 
-st.subheader("Preview Final Dataset")
-st.dataframe(df.head())
+    st.download_button(
+        label="Download as Excel",
+        data=excel_data,
+        file_name="cleaned_data.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
-st.subheader("Download Options")
+    # JSON
+    json_data = df.to_json(orient="records", indent=4)
+    st.download_button(
+        label="Download as JSON",
+        data=json_data,
+        file_name="cleaned_data.json",
+        mime="application/json"
+    )
 
-csv = df.to_csv(index=False).encode("utf-8")
-
-st.download_button(
-    label="Download as CSV",
-    data=csv,
-    file_name="cleaned_data.csv",
-    mime="text/csv"
-)
+else:
+    st.warning("No dataset available. Please upload and clean a dataset first.")
+    
