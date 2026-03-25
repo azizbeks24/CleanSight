@@ -42,4 +42,3 @@ if df is not None:
 
 else:
     st.warning("No dataset available. Please upload and clean a dataset first.")
-    
