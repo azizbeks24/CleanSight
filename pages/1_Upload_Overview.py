@@ -1,4 +1,4 @@
-from utils.session import initialize_session_state, reset_session_state
+from utils.session import initialize_session_state, reset_session_state, clear_history
 import streamlit as st
 import pandas as pd
 import json
@@ -49,6 +49,8 @@ if file is not None:
             st.success("File uploaded successfully!")
             st.session_state.original_df = df.copy()
             st.session_state.working_df = df.copy()
+            st.session_state.transformation_log = []
+            clear_history()
             st.info("Dataset loaded. Proceed to Cleaning Studio.")
         else:
             st.error("Could not process file format.")

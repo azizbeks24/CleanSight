@@ -1,7 +1,11 @@
 import streamlit as st
 import pandas as pd
 
-from utils.session import initialize_session_state
+from utils.session import (
+    initialize_session_state,
+    save_undo_state,
+    undo_last_step,
+)
 from cleaning.missing_values import (
     get_missing_summary,
     drop_rows_with_missing,
@@ -34,6 +38,19 @@ if st.session_state.working_df is None:
     st.warning("No dataset loaded. Please go to Upload Overview first.")
     st.stop()
 
+top_left, top_right = st.columns([4, 1])
+
+with top_left:
+    st.caption("Apply transformations and undo the most recent step if needed.")
+
+with top_right:
+    if st.button("Undo Last Step"):
+        if undo_last_step():
+            st.success("Last transformation undone successfully.")
+            st.rerun()
+        else:
+            st.warning("No steps to undo.")
+
 df = st.session_state.working_df.copy()
 
 show_original = st.checkbox("Show original dataset")
@@ -44,6 +61,11 @@ if show_original and st.session_state.original_df is not None:
 
 st.subheader("Current Dataset Preview")
 st.dataframe(df.head())
+
+col1, col2, col3 = st.columns(3)
+col1.metric("Rows", df.shape[0])
+col2.metric("Columns", df.shape[1])
+col3.metric("Undo Steps Available", len(st.session_state.history))
 
 st.subheader("Missing Values Summary")
 missing_summary = get_missing_summary(df)
@@ -90,6 +112,7 @@ with tab1:
                 before_rows = len(df)
                 before_missing = df.isnull().sum().sum()
 
+                save_undo_state(df)
                 new_df = drop_rows_with_missing(df, selected_columns)
 
                 after_rows = len(new_df)
@@ -132,6 +155,7 @@ with tab1:
                 before_missing = df.isnull().sum().sum()
                 before_cols = list(df.columns)
 
+                save_undo_state(df)
                 new_df = drop_columns_by_threshold(df, threshold)
 
                 after_cols_count = new_df.shape[1]
@@ -182,6 +206,7 @@ with tab2:
                 before_missing = df[column].isnull().sum()
                 total_before_missing = df.isnull().sum().sum()
 
+                save_undo_state(df)
                 new_df = fill_missing_with_constant(df, column, constant_value)
 
                 after_missing = new_df[column].isnull().sum()
@@ -219,6 +244,7 @@ with tab2:
                 before_missing = df[column].isnull().sum()
                 total_before_missing = df.isnull().sum().sum()
 
+                save_undo_state(df)
                 new_df = fill_missing_with_stat(df, column, method)
 
                 after_missing = new_df[column].isnull().sum()
@@ -262,6 +288,7 @@ with tab3:
                 before_missing = df[column].isnull().sum()
                 total_before_missing = df.isnull().sum().sum()
 
+                save_undo_state(df)
                 new_df = fill_missing_forward(df, column)
 
                 after_missing = new_df[column].isnull().sum()
@@ -295,6 +322,7 @@ with tab3:
                 before_missing = df[column].isnull().sum()
                 total_before_missing = df.isnull().sum().sum()
 
+                save_undo_state(df)
                 new_df = fill_missing_backward(df, column)
 
                 after_missing = new_df[column].isnull().sum()
@@ -354,7 +382,10 @@ with dup_tab1:
             st.warning("Please confirm the transformation before applying it.")
         else:
             before_rows = len(df)
+
+            save_undo_state(df)
             new_df = remove_duplicates(df, keep=keep_option_full)
+
             after_rows = len(new_df)
             removed_rows = before_rows - after_rows
 
@@ -412,7 +443,10 @@ with dup_tab2:
                 st.warning("Please confirm the transformation before applying it.")
             else:
                 before_rows = len(df)
+
+                save_undo_state(df)
                 new_df = remove_duplicates(df, keep=keep_option_subset, subset=subset_columns)
+
                 after_rows = len(new_df)
                 removed_rows = before_rows - after_rows
 
@@ -465,6 +499,8 @@ with types_tab2:
             st.warning("Please confirm before applying.")
         else:
             before_type = str(df[column].dtype)
+
+            save_undo_state(df)
 
             if target_type == "numeric":
                 new_df = convert_to_numeric(df, column)
